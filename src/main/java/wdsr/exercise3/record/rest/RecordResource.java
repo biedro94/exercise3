@@ -1,11 +1,25 @@
 package wdsr.exercise3.record.rest;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.inject.Inject;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.GenericEntity;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import wdsr.exercise3.record.Record;
 import wdsr.exercise3.record.RecordInventory;
 
 @Path("/records")
@@ -21,14 +35,22 @@ public class RecordResource {
 	 * RecordInventory instance (a CDI bean) will be injected at runtime.
 	 * Content-Type used throughout this exercise is application/xml.
 	 * API invocations that must be supported:
-	 */
-	
+	 */		
 	/**
 	 * * GET https://localhost:8091/records
 	 * ** Returns a list of all records (as application/xml)
 	 * ** Response status: HTTP 200
 	 */
-
+	
+	@GET
+	@Produces("application/xml")
+	public Response getAllRecords(){
+		List<Record> data = new ArrayList<Record>();
+        data = this.recordInventory.getRecords();
+        GenericEntity<List<Record>> gen = new GenericEntity<List<Record>>(data){};
+        return Response.status(Status.OK).entity(gen).build();
+	}	
+	
 	/**
 	 * POST https://localhost:8091/records
 	 * ** Creates a new record, returns ID of the new record.
@@ -37,12 +59,40 @@ public class RecordResource {
 	 * ** Response status if submitted record has ID set: HTTP 400
 	 */
 	
+	@POST
+	@Consumes("application/xml")
+	@Produces("application/xml")
+	public Response addRecord(Record rec){		
+		if(rec.getId()!=null){
+			return Response.status(Status.BAD_REQUEST).build();
+		}		
+		this.recordInventory.addRecord(rec);
+		
+        return Response.status(Status.CREATED).entity(rec).build();	
+	}
+	
 	/**
 	 * * GET https://localhost:8091/records/{id}
 	 * ** Returns an existing record (as application/xml)
 	 * ** Response status if ok: HTTP 200
 	 * ** Response status if {id} is not known: HTTP 404
 	 */
+	
+	@GET
+	@Path("/{id}")
+	@Consumes("application/xml")
+	@Produces("application/xml")
+	public Response getRecordById(@PathParam(value = "id") int id){	
+		
+		Record rec = this.recordInventory.getRecord(id);
+		
+        if (rec != null) {
+            return Response.status(Status.OK).entity(rec).build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }		
+	}
+	
 	 /**
 	 * * PUT https://localhost:8091/records/{id}
 	 * ** Replaces an existing record in entirety.
@@ -51,10 +101,42 @@ public class RecordResource {
 	 * ** Response status if {id} is not known: HTTP 404
 	 */
 	
+	@PUT
+	@Path("/{id}")
+	@Consumes("application/xml")
+	@Produces("application/xml")
+	public Response updateRecord(Record record, @PathParam(value = "id") int id){
+		
+		if (record.getId() != null && id != record.getId() ) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+
+		if (this.recordInventory.updateRecord(id, record)) {
+            return Response.status(Response.Status.NO_CONTENT).build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+	}	
+	
 	/**
 	 * * DELETE https://localhost:8091/records/{id}
 	 * ** Deletes an existing record.
 	 * ** Response status if ok: HTTP 204
 	 * ** Response status if {id} is not known: HTTP 404
 	 */
+	
+	@DELETE
+	@Path("/{id}")
+	@Consumes("application/xml")
+	@Produces("application/xml")
+	public Response deleteRecord(@PathParam(value = "id") int id){				
+	    if (recordInventory.deleteRecord(id)) {	        	
+	        return Response.status(Response.Status.NO_CONTENT).build();
+	    } else {
+	        return Response.status(Response.Status.NOT_FOUND).build();
+	    }
+	}
+	
+	
+	
 }
