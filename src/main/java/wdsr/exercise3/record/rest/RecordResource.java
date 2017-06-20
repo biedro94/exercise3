@@ -12,10 +12,13 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,17 +64,19 @@ public class RecordResource {
 	 * ** Response status if submitted record has ID set: HTTP 400
 	 */
 	
-	@POST
-	@Consumes("application/xml")
-	@Produces("application/xml")
-	public Response addRecord(Record rec){		
-		if(rec.getId()!=null){
-			return Response.status(Status.BAD_REQUEST).build();
-		}		
-		this.recordInventory.addRecord(rec);
-		
-        return Response.status(Status.CREATED).entity(rec).build();	
-	}
+    @POST
+    @Consumes(MediaType.APPLICATION_XML)
+    @Produces(MediaType.APPLICATION_XML)
+    public Response addNewRecord(Record record, @Context UriInfo uriInfo) {
+        if (record.getId() != null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Record with id="+record.getId()+" already exist").build();
+        }
+        int id = recordInventory.addRecord(record);
+        UriBuilder builder = uriInfo.getAbsolutePathBuilder();
+        builder.path(Integer.toString(id));
+
+        return Response.created(builder.build()).build();
+    }
 	
 	/**
 	 * * GET https://localhost:8091/records/{id}
@@ -103,28 +108,22 @@ public class RecordResource {
 	 * ** Response status if {id} is not known: HTTP 404
 	 */
 	
-	@PUT
-	@Path("/{id}")
-	@Consumes("application/xml")
-	@Produces("application/xml")
-	public Response updateRecord(Record record, @PathParam(value = "id") int id){
-		
-		boolean isUpdatedRecord;
-		
-		if (record.getId() != null || id != record.getId() ) {
-			record.setId(id);			
-			isUpdatedRecord = recordInventory.updateRecord(id, record);
-            
-        }else{
-        	return Response.status(Response.Status.BAD_REQUEST).build();
+    @PUT
+    @Path("/{id}")
+    @Consumes(MediaType.APPLICATION_XML)
+    @Produces(MediaType.APPLICATION_XML)
+    public Response updateRecord(Record record, @PathParam(value = "id") int id) {
+        if (record.getId() != null && id != record.getId()) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        boolean updated = recordInventory.updateRecord(id, record);
+        if (updated) {
+            return Response.noContent().build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND).entity("There is no Record with id="+id).build();
         }
 
-		if (isUpdatedRecord) {
-            return Response.status(Response.Status.NO_CONTENT).build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-	}	
+    }
 	
 	/**
 	 * * DELETE https://localhost:8091/records/{id}
