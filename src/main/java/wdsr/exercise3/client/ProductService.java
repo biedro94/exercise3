@@ -1,11 +1,17 @@
 package wdsr.exercise3.client;
 
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.GenericType;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import wdsr.exercise3.model.Product;
 import wdsr.exercise3.model.ProductType;
@@ -21,8 +27,20 @@ public class ProductService extends RestClientBase {
 	 * @return A list of found products - possibly empty, never null.
 	 */
 	public List<Product> retrieveProducts(Set<ProductType> types) {
-		// TODO
-		return null;
+		
+		List<Product> productList = new ArrayList<Product>();		
+		Response response = baseTarget.path("/products").request(MediaType.APPLICATION_JSON).get(Response.class);		
+		List<Product> allProducts = response.readEntity(new GenericType<List<Product>>(){});
+		
+		for(Product product : allProducts){
+			for(ProductType curret :types){
+				if(curret.equals(product.getType())){
+					productList.add(product);
+				}
+			}
+		}		
+		
+		return productList;
 	}
 	
 	/**
@@ -30,8 +48,16 @@ public class ProductService extends RestClientBase {
 	 * @return A list of all products - possibly empty, never null.
 	 */
 	public List<Product> retrieveAllProducts() {
-		// TODO
-		return null;
+		
+		List<Product> productList = new ArrayList<Product>();		
+		Response response = baseTarget.path("/products").request(MediaType.APPLICATION_JSON).get(Response.class);		
+		List<Product> allProducts = response.readEntity(new GenericType<List<Product>>(){});
+		
+		for(Product product : allProducts){
+			productList.add(product);
+		}		
+		
+		return productList;
 	}
 	
 	/**
@@ -41,8 +67,15 @@ public class ProductService extends RestClientBase {
 	 * @throws NotFoundException if no product found for the given ID.
 	 */
 	public Product retrieveProduct(int id) {
-		// TODO
-		return null;
+		
+		Response response = baseTarget.path("/products/"+id).request(MediaType.APPLICATION_JSON).get(Response.class);	
+		
+		try{
+			Product productById = response.readEntity(new GenericType<Product>(){});
+			return productById;
+		}catch(Exception e){
+			throw new NotFoundException();
+		}
 	}	
 	
 	/**
@@ -52,7 +85,14 @@ public class ProductService extends RestClientBase {
 	 * @throws WebApplicationException if request to the server failed
 	 */
 	public int storeNewProduct(Product product) {
-		// TODO
+
+
+		Response response = baseTarget.path("/products").request(MediaType.APPLICATION_JSON).post(Entity.entity(product, MediaType.APPLICATION_JSON));
+				
+		if(response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode()){
+			throw new WebApplicationException();
+		}
+				
 		return 0;
 	}
 	
@@ -61,8 +101,13 @@ public class ProductService extends RestClientBase {
 	 * @param product Product with updated values. Its ID must identify an existing resource.
 	 * @throws NotFoundException if no product found for the given ID.
 	 */
-	public void updateProduct(Product product) {
-		// TODO
+	public void updateProduct(Product product) {		
+		
+		Response response = baseTarget.path("/products/"+product.getId()).request(MediaType.APPLICATION_JSON).put(Entity.entity(product, MediaType.APPLICATION_JSON));
+	
+		if(response.getStatus() != Response.Status.NO_CONTENT.getStatusCode()){
+			throw new NotFoundException();
+		}
 	}
 
 	
@@ -72,6 +117,10 @@ public class ProductService extends RestClientBase {
 	 * @throws NotFoundException if no product found for the given ID.
 	 */
 	public void deleteProduct(Product product) {
-		// TODO
+		Response response = baseTarget.path("/products/"+product.getId()).request(MediaType.APPLICATION_JSON).delete();
+		
+		if(response.getStatus() != Response.Status.NO_CONTENT.getStatusCode()){
+			throw new NotFoundException();
+		}
 	}
 }
