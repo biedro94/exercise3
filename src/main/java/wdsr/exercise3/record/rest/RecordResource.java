@@ -13,6 +13,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.GenericEntity;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -45,10 +46,11 @@ public class RecordResource {
 	@GET
 	@Produces("application/xml")
 	public Response getAllRecords(){
-		List<Record> data = new ArrayList<Record>();
-        data = this.recordInventory.getRecords();
-        GenericEntity<List<Record>> gen = new GenericEntity<List<Record>>(data){};
-        return Response.status(Status.OK).entity(gen).build();
+		List<Record> listOfRecords = new ArrayList<Record>();
+		listOfRecords = recordInventory.getRecords();
+		GenericEntity<List<Record>> result = new GenericEntity<List<Record>>(listOfRecords){};
+		
+		return Response.ok(result).build();
 	}	
 	
 	/**
@@ -84,10 +86,10 @@ public class RecordResource {
 	@Produces("application/xml")
 	public Response getRecordById(@PathParam(value = "id") int id){	
 		
-		Record rec = this.recordInventory.getRecord(id);
+		Record record = this.recordInventory.getRecord(id);
 		
-        if (rec != null) {
-            return Response.status(Status.OK).entity(rec).build();
+        if (record != null) {
+            return Response.status(Response.Status.OK).entity(record).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).build();
         }		
@@ -107,11 +109,17 @@ public class RecordResource {
 	@Produces("application/xml")
 	public Response updateRecord(Record record, @PathParam(value = "id") int id){
 		
-		if (record.getId() != null && id != record.getId() ) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
+		boolean isUpdatedRecord;
+		
+		if (record.getId() != null || id != record.getId() ) {
+			record.setId(id);			
+			isUpdatedRecord = recordInventory.updateRecord(id, record);
+            
+        }else{
+        	return Response.status(Response.Status.BAD_REQUEST).build();
         }
 
-		if (this.recordInventory.updateRecord(id, record)) {
+		if (isUpdatedRecord) {
             return Response.status(Response.Status.NO_CONTENT).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -129,8 +137,11 @@ public class RecordResource {
 	@Path("/{id}")
 	@Consumes("application/xml")
 	@Produces("application/xml")
-	public Response deleteRecord(@PathParam(value = "id") int id){				
-	    if (recordInventory.deleteRecord(id)) {	        	
+	public Response deleteRecord(@PathParam(value = "id") int id){	
+		
+		boolean isDeletedRecord = recordInventory.deleteRecord(id);		
+		
+	    if (isDeletedRecord) {	        	
 	        return Response.status(Response.Status.NO_CONTENT).build();
 	    } else {
 	        return Response.status(Response.Status.NOT_FOUND).build();
